@@ -3,6 +3,7 @@ extern crate log;
 
 mod command;
 mod docker;
+mod kubernetes;
 mod entrypoint;
 mod health;
 mod logging;

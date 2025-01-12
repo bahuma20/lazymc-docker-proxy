@@ -18,3 +18,5 @@ tokio = { version = "1.43.0", default-features = false, features = [
 ] }
 toml = "0.8.19"
 version-compare = "0.2.0"
+kube = { version = "0.98.0", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.24.0", features = ["latest"] }
