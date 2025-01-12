@@ -25,6 +25,10 @@ struct Args {
     /// Execute with this flag when running as a health check
     #[arg(short, long)]
     health: bool,
+
+    // Can be one of "docker" or "kubernetes"
+    #[arg(short, long, default_value = "docker")]
+    backend: String,
 }
 
 /// Main entrypoint for the application
@@ -34,10 +38,10 @@ fn main() {
     let args: Args = Args::parse();
 
     if args.command {
-        command::run(args.group.unwrap());
+        command::run(args.group.unwrap(), &args.backend);
     } else if args.health {
         health::run();
     } else {
-        entrypoint::run();
+        entrypoint::run(&args.backend);
     }
 }

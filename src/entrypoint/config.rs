@@ -73,7 +73,7 @@ struct JoinHoldSection {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct JoinForwardSection{
+struct JoinForwardSection {
     address: Option<String>,
     send_proxy_v2: Option<bool>,
 }
@@ -132,10 +132,14 @@ pub struct Config {
 /// Configuration for the lazymc server
 impl Config {
     /// Generate the start command for the lazymc server
-    pub fn start_command(&self) -> Command {
+    pub fn start_command(&self, backend: &String) -> Command {
         // Start the docker container if the IP address has not been resolved
         if !self.resolved_ip {
-            docker::start(self.group().into());
+            if backend == "docker" {
+                docker::start(self.group().into());
+            } else {
+                // TODO: Implement kubernetes support
+            }
         }
 
         let mut command: Command = Command::new(self.start_command.clone());
@@ -166,7 +170,7 @@ impl Config {
     }
 
     /// Create a new configuration from container labels
-    pub fn from_container_labels(labels: HashMap<String, String>) -> Self {
+    pub fn from_container_labels(labels: HashMap<String, String>, backend: &String) -> Self {
         // Check for required labels
         labels.get("lazymc.server.address").unwrap_or_else(|| {
             error!(target: "lazymc-docker-proxy::entrypoint::config", "lazymc.server.address is not set");
@@ -199,8 +203,9 @@ impl Config {
                     .unwrap_or_else(|| "/server".to_string()),
             ),
             command: Some(format!(
-                "lazymc-docker-proxy --command --group {}",
-                labels.get("lazymc.group").unwrap()
+                "lazymc-docker-proxy --command --group {} --backend {}",
+                labels.get("lazymc.group").unwrap(),
+                backend
             )),
             freeze_process: Some(false),
             // If the IP address was not resolved, wake_on_start should be true
@@ -240,10 +245,8 @@ impl Config {
         };
 
         let join_kick_section: JoinKickSection = JoinKickSection {
-            starting: labels
-                .get("lazymc.join.kick.starting").cloned(),
-            stopping: labels
-                .get("lazymc.join.kick.stopping").cloned(),
+            starting: labels.get("lazymc.join.kick.starting").cloned(),
+            stopping: labels.get("lazymc.join.kick.stopping").cloned(),
         };
 
         let join_hold_section: JoinHoldSection = JoinHoldSection {
@@ -253,8 +256,7 @@ impl Config {
         };
 
         let join_forward_section: JoinForwardSection = JoinForwardSection {
-            address: labels
-                .get("lazymc.join.forward.address").cloned(),
+            address: labels.get("lazymc.join.forward.address").cloned(),
             send_proxy_v2: labels
                 .get("lazymc.join.forward.send_proxy_v2")
                 .map(|x| x == "true"),
@@ -264,21 +266,18 @@ impl Config {
             timeout: labels
                 .get("lazymc.join.lobby.timeout")
                 .and_then(|x| x.parse().ok()),
-            message: labels
-                .get("lazymc.join.lobby.message").cloned(),
-            ready_sound: labels
-                .get("lazymc.join.lobby.sound").cloned(),
+            message: labels.get("lazymc.join.lobby.message").cloned(),
+            ready_sound: labels.get("lazymc.join.lobby.sound").cloned(),
         };
 
         let join_section: JoinSection = JoinSection {
             methods: labels
                 .get("lazymc.join.methods")
                 .and_then(|x| {
-                    Some(x.split(",")
-                        .map(|s| s.to_string())
-                        .collect())
-                    .filter(|m: &Vec<String>| !m.is_empty())
-                }).or_else(|| None),
+                    Some(x.split(",").map(|s| s.to_string()).collect())
+                        .filter(|m: &Vec<String>| !m.is_empty())
+                })
+                .or_else(|| None),
             kick: join_kick_section.clone(),
             hold: join_hold_section.clone(),
             forward: join_forward_section.clone(),
@@ -303,15 +302,11 @@ impl Config {
             sleeping: labels.get("lazymc.motd.sleeping").cloned(),
             starting: labels.get("lazymc.motd.starting").cloned(),
             stopping: labels.get("lazymc.motd.stopping").cloned(),
-            from_server: labels
-                .get("lazymc.motd.from_server")
-                .map(|x| x == "true"),
+            from_server: labels.get("lazymc.motd.from_server").map(|x| x == "true"),
         };
 
         let lockout_section: LockoutSection = LockoutSection {
-            enabled: labels
-                .get("lazymc.lockout.enabled")
-                .map(|x| x == "true"),
+            enabled: labels.get("lazymc.lockout.enabled").map(|x| x == "true"),
             message: labels.get("lazymc.lockout.message").cloned(),
         };
 
@@ -366,16 +361,15 @@ impl Config {
     }
 
     /// Create a new configuration from environment variables
-    /// 
+    ///
     /// # Deprecated
     #[deprecated(since = "2.1.0", note = "Use `from_container_labels` instead")]
-    pub fn from_env() -> Self {
+    pub fn from_env(backend: &String) -> Self {
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "***************************************************************************************************************");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "DEPRECATED: Using Environment Variables to configure lazymc is deprecated. Please use container labels instead.");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "       see: https://github.com/joesturge/lazymc-docker-proxy?tab=readme-ov-file#usage");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "***************************************************************************************************************");
 
-        
         let mut labels: HashMap<String, String> = HashMap::new();
         if let Ok(value) = var("LAZYMC_GROUP") {
             labels.insert("lazymc.group".to_string(), value.clone());
@@ -473,6 +467,6 @@ impl Config {
             labels.insert("lazymc.time.sleep_after".to_string(), value);
         }
 
-        return Config::from_container_labels(labels);
+        return Config::from_container_labels(labels, backend);
     }
 }
