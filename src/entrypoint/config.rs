@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::{exit, Command};
 use version_compare::Version;
 
-use crate::{docker, health};
+use crate::{docker, health, kubernetes, BackendType};
 
 const DEFAULT_PORT: i32 = 25565;
 
@@ -132,13 +132,12 @@ pub struct Config {
 /// Configuration for the lazymc server
 impl Config {
     /// Generate the start command for the lazymc server
-    pub fn start_command(&self, backend: &String) -> Command {
+    pub fn start_command(&self, backend_type: BackendType) -> Command {
         // Start the docker container if the IP address has not been resolved
         if !self.resolved_ip {
-            if backend == "docker" {
-                docker::start(self.group().into());
-            } else {
-                // TODO: Implement kubernetes support
+            match backend_type {
+                BackendType::Docker => { docker::start(self.group().into()); }
+                BackendType::Kubernetes => { kubernetes::start(self.group().into()); }
             }
         }
 
@@ -170,7 +169,7 @@ impl Config {
     }
 
     /// Create a new configuration from container labels
-    pub fn from_container_labels(labels: HashMap<String, String>, backend: &String) -> Self {
+    pub fn from_container_labels(labels: HashMap<String, String>,) -> Self {
         // Check for required labels
         labels.get("lazymc.server.address").unwrap_or_else(|| {
             error!(target: "lazymc-docker-proxy::entrypoint::config", "lazymc.server.address is not set");
@@ -203,9 +202,8 @@ impl Config {
                     .unwrap_or_else(|| "/server".to_string()),
             ),
             command: Some(format!(
-                "lazymc-docker-proxy --command --group {} --backend {}",
-                labels.get("lazymc.group").unwrap(),
-                backend
+                "lazymc-docker-proxy --command --group {}",
+                labels.get("lazymc.group").unwrap()
             )),
             freeze_process: Some(false),
             // If the IP address was not resolved, wake_on_start should be true
@@ -364,7 +362,7 @@ impl Config {
     ///
     /// # Deprecated
     #[deprecated(since = "2.1.0", note = "Use `from_container_labels` instead")]
-    pub fn from_env(backend: &String) -> Self {
+    pub fn from_env() -> Self {
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "***************************************************************************************************************");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "DEPRECATED: Using Environment Variables to configure lazymc is deprecated. Please use container labels instead.");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "       see: https://github.com/joesturge/lazymc-docker-proxy?tab=readme-ov-file#usage");
@@ -467,6 +465,6 @@ impl Config {
             labels.insert("lazymc.time.sleep_after".to_string(), value);
         }
 
-        return Config::from_container_labels(labels, backend);
+        return Config::from_container_labels(labels);
     }
 }

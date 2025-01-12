@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use k8s_openapi::serde_json::json;
 use kube::api::{Patch, PatchParams};
@@ -34,4 +35,13 @@ pub fn start(group: String) {
 
 pub fn stop(group: String) {
     error!(target: "lazymc-docker-proxy::kubernetes", "Stopping of Kubernetes StatefulSets not yet implemented!");
+}
+
+pub fn stop_all_containers() {
+    error!(target: "lazymc-docker-proxy::kubernetes", "Stopping of Kubernetes StatefulSets not yet implemented!");
+}
+
+pub(crate) fn get_container_labels() -> Vec<HashMap<std::string::String, std::string::String>> {
+    error!(target: "lazymc-docker-proxy::kubernetes", "Get Container labels of Kubernetes StatefulSets not yet implemented!");
+    vec![]
 }

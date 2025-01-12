@@ -1,27 +1,26 @@
 use std::{process, thread, time::Duration};
 
-use crate::{docker, kubernetes};
+use crate::{docker, kubernetes, BackendType};
 
 /// Run the command to start a group
-pub fn run(group: String, backend: &String) {
+pub fn run(group: String, backend_type: BackendType) {
     info!(target: "lazymc-docker-proxy::command", "Received command to start group: {}", group);
     // Set a handler for SIGTERM
     let cloned_group = group.clone();
+    let cloned_backend_type = backend_type.clone();
     ctrlc::set_handler(move || {
         info!(target: "lazymc-docker-proxy::command", "Received SIGTERM, stopping server...");
-        if backend == "docker" {
-            docker::stop(cloned_group.clone());
-        } else {
-            kubernetes::stop(cloned_group.clone());
+        match cloned_backend_type {
+            BackendType::Docker => {docker::stop(cloned_group.clone())}
+            BackendType::Kubernetes => {kubernetes::stop(cloned_group.clone())}
         }
         process::exit(0);
     }).unwrap();
 
     // Start the command
-    if backend == "docker" {
-        docker::start(group.clone());
-    } else {
-        kubernetes::start(group.clone());
+    match backend_type {
+        BackendType::Docker => {docker::start(group.clone())},
+        BackendType::Kubernetes => {kubernetes::start(group.clone())},
     }
 
     // Wait for SIGTERM
