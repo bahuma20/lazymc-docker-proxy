@@ -33,5 +33,5 @@ pub fn start(group: String) {
 }
 
 pub fn stop(group: String) {
-    error!(target: "lazymc-docker-proxy::kubernetes", "Stopping of Kubernetes StatefulSets not yet implemented");
+    error!(target: "lazymc-docker-proxy::kubernetes", "Stopping of Kubernetes StatefulSets not yet implemented!");
 }
