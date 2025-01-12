@@ -161,7 +161,7 @@ impl Config {
     /// Create the lazymc configuration file
     fn create_file(&self) {
         let toml = self.as_toml_string();
-        let file_name: &String = &format!("lazymc.{}.toml", self.group.clone());
+        let file_name: &String = &format!("configfiles/lazymc.{}.toml", self.group.clone());
         let path: &Path = Path::new(file_name);
         let mut file = File::create(path).unwrap();
         file.write(toml.as_ref()).unwrap();
@@ -345,7 +345,7 @@ impl Config {
                 false => format!("lazymc"),
             },
             config_file: format!(
-                "lazymc.{}.toml",
+                "configfiles/lazymc.{}.toml",
                 labels.get("lazymc.group").unwrap().clone()
             ),
             group: labels.get("lazymc.group").unwrap().clone(),
