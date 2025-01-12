@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env::var;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use k8s_openapi::serde_json::json;
 use kube::api::{Patch, PatchParams};
@@ -12,12 +13,12 @@ pub fn start(group: String) {
         // Erhalte eine Kubernetes-Client-Instanz.
         let client = Client::try_default().await;
 
-        let statefulset_name = "minecraft";
-        let namespace = "minecraft";
+        let statefulset_name = var("STATEFULSET_NAME").unwrap();
+        let namespace = var("STATEFULSET_NAMESPACE").unwrap();
 
         info!(target: "lazymc-docker-proxy::kubernetes", "Scaling up StatefulSet {} in namespace {} to 1 replicas", statefulset_name, namespace);
 
-        let statefulsets: Api<StatefulSet> = Api::namespaced(client.unwrap(), namespace);
+        let statefulsets: Api<StatefulSet> = Api::namespaced(client.unwrap(), namespace.as_str());
 
         let patch = json!({
             "spec": {
@@ -26,9 +27,9 @@ pub fn start(group: String) {
         });
 
         let patch_params = PatchParams::apply("scale-up-minecraft-statefulset");
-        if let Err(err) = statefulsets.patch(statefulset_name, &patch_params, &Patch::Apply(patch)).await
+        if let Err(err) = statefulsets.patch(statefulset_name.as_str(), &patch_params, &Patch::Apply(patch)).await
         {
-            error!(target: "lazymc-docker-proxy::kubernetes", "Error scaling up StatefulSet {} in namespace {}: {}", statefulset_name, namespace, err);
+            error!(target: "lazymc-docker-proxy::kubernetes", "Error scaling up StatefulSet {} in namespace {}: {}", statefulset_name.as_str(), namespace, err);
         }
     })
 }
