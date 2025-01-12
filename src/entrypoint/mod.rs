@@ -27,7 +27,7 @@ pub fn run(backend_type: BackendType) {
     }
 
     if configs.is_empty() {
-        configs.push(Config::from_env());
+        configs.push(Config::from_env(backend_type.clone()));
     }
 
     for config in configs {

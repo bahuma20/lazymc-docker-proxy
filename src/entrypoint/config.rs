@@ -362,7 +362,7 @@ impl Config {
     ///
     /// # Deprecated
     #[deprecated(since = "2.1.0", note = "Use `from_container_labels` instead")]
-    pub fn from_env() -> Self {
+    pub fn from_env(backend_type: BackendType) -> Self {
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "***************************************************************************************************************");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "DEPRECATED: Using Environment Variables to configure lazymc is deprecated. Please use container labels instead.");
         warn!(target: "lazymc-docker-proxy::entrypoint::config", "       see: https://github.com/joesturge/lazymc-docker-proxy?tab=readme-ov-file#usage");
@@ -372,7 +372,10 @@ impl Config {
         if let Ok(value) = var("LAZYMC_GROUP") {
             labels.insert("lazymc.group".to_string(), value.clone());
             // Stop the server container if it is running
-            docker::stop(value.clone())
+            match backend_type {
+                BackendType::Docker => {docker::stop(value.clone())}
+                BackendType::Kubernetes => {kubernetes::stop(value.clone())}
+            }
         }
         if let Ok(value) = var("LAZYMC_JOIN_METHODS") {
             labels.insert("lazymc.join.methods".to_string(), value);
