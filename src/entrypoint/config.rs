@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env::var;
-use std::fs::File;
+use std::fs::{create_dir, create_dir_all, File};
 use std::io::Write;
 use std::net::ToSocketAddrs;
 use std::path::Path;
@@ -163,6 +163,7 @@ impl Config {
         let toml = self.as_toml_string();
         let file_name: &String = &format!("configfiles/lazymc.{}.toml", self.group.clone());
         let path: &Path = Path::new(file_name);
+        create_dir_all(Path::new("configfiles")).unwrap();
         let mut file = File::create(path).unwrap();
         file.write(toml.as_ref()).unwrap();
         debug!(target: "lazymc-docker-proxy::entrypoint::config", "`generated`: {}\n\n{}", path.display(), toml);
